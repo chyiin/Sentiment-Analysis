@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int)
     parser.add_argument('--epoch', type=int)
     parser.add_argument('--lr', type=float)
-    parser.add_argument('--max_len', type=int)
+    parser.add_argument('--MAX_LEN', type=int)
     parser.add_argument('--gpu', type=int)
     parser.add_argument('--seed', type=int)
     parser.add_argument('--wandb', action='store_true')
@@ -57,7 +57,7 @@ def simple_text_clean(x):
     x = re.sub(r'\s[^\w\s]\s', '', x)
     return x
 
-def preprocessing_for_bert(data, lbs, max_len, labels_to_ids, tokenizer):
+def preprocessing_for_bert(data, lbs, MAX_LEN, labels_to_ids, tokenizer):
         
     input_ids = []
     attention_masks = []
@@ -66,8 +66,8 @@ def preprocessing_for_bert(data, lbs, max_len, labels_to_ids, tokenizer):
         encoded_sent = tokenizer.encode_plus(
             text=sent,
             add_special_tokens=True,        
-            max_length=max_len,                  
-            pad_to_max_length=True,         
+            MAX_LENgth=MAX_LEN,                  
+            pad_to_MAX_LENgth=True,         
             return_attention_mask=True)
         input_ids.append(encoded_sent.get('input_ids'))
         attention_masks.append(encoded_sent.get('attention_mask'))
@@ -87,14 +87,15 @@ def main():
 
 def train(args):
 
-    DATE, LEARNING_RATE, BATCH_SIZE, EPOCHS, GPU, SEED, max_len = args['date'], args['lr'], args['batch_size'], args['epoch'], args['gpu'], args['seed'], args['max_len']
-
+    DATE, GPU, SEED = args['date'],  args['gpu'], args['seed']
+    LEARNING_RATE, BATCH_SIZE, EPOCHS, MAX_LEN = args['lr'], args['batch_size'], args['epoch'], args['max_len']
+    
     same_seeds(SEED, GPU)
 
     print('\nLoading...')
 
     print(f'\n[Date]: {DATE}\n[Gpu]: {GPU}\n[Seed]: {SEED}')
-    print(f'[Epochs]: {EPOCHS}\n[Batch Size]: {BATCH_SIZE}\n[Learning Rate]: {LEARNING_RATE}\n[Max Length]: {max_len}\n')
+    print(f'[Epochs]: {EPOCHS}\n[Batch Size]: {BATCH_SIZE}\n[Learning Rate]: {LEARNING_RATE}\n[Max Length]: {MAX_LEN}\n')
 
     train_data = pd.read_csv('jigsaw-multilingual-toxic-comment-classification/jigsaw-toxic-comment-train.csv').sample(frac=1).reset_index(drop=True)[:100]
     valid_data = pd.read_csv('jigsaw-multilingual-toxic-comment-classification/validation.csv').sample(frac=1).reset_index(drop=True)[:10]
@@ -112,11 +113,11 @@ def train(args):
     if args['mode'] == 'train':
 
         if args['wandb']:
-            wandb.init(project="Bert-Sentiment-Analysis", name=f'multi-bert-base-{LEARNING_RATE}-{EPOCHS}-{max_len}-{BATCH_SIZE}', entity="chyiin")
+            wandb.init(project="Bert-Sentiment-Analysis", name=f'multi-bert-base-{LEARNING_RATE}-{EPOCHS}-{MAX_LEN}-{BATCH_SIZE}', entity="chyiin")
 
         print('\nTokenizing data...\n')
-        train_inputs, train_masks, train_labels = preprocessing_for_bert(train_data['comment_text'], train_data['toxic'], max_len, labels_to_ids, tokenizer)
-        val_inputs, val_masks, val_labels = preprocessing_for_bert(valid_data['comment_text'], valid_data['toxic'], max_len, labels_to_ids, tokenizer)
+        train_inputs, train_masks, train_labels = preprocessing_for_bert(train_data['comment_text'], train_data['toxic'], MAX_LEN, labels_to_ids, tokenizer)
+        val_inputs, val_masks, val_labels = preprocessing_for_bert(valid_data['comment_text'], valid_data['toxic'], MAX_LEN, labels_to_ids, tokenizer)
 
         train_data = TensorDataset(train_inputs, train_masks, train_labels)
         train_sampler = RandomSampler(train_data)
@@ -204,7 +205,7 @@ def train(args):
             print()
             if roc_auc_score(true_labels, prob_predictions)>=max(roc_auc_list):
                 print("saving state dict")
-                torch.save(model.state_dict(), f'model_{DATE}/bert-checkpoint-{BATCH_SIZE}-{LEARNING_RATE}-{EPOCHS}-{max_len}.pt')
+                torch.save(model.state_dict(), f'model_{DATE}/bert-checkpoint-{BATCH_SIZE}-{LEARNING_RATE}-{EPOCHS}-{MAX_LEN}.pt')
 
             if args['wandb']:
 
@@ -219,7 +220,7 @@ def train(args):
 
         print('\nLoading ...')
         golden = pd.read_csv('jigsaw-multilingual-toxic-comment-classification/test_labels.csv')['toxic'].values
-        test_inputs, test_masks, test_labels = preprocessing_for_bert(test_data['content'], None, max_len, labels_to_ids, tokenizer)
+        test_inputs, test_masks, test_labels = preprocessing_for_bert(test_data['content'], None, MAX_LEN, labels_to_ids, tokenizer)
     
         testing_data = TensorDataset(test_inputs, test_masks)
         testing_sampler = RandomSampler(testing_data)
@@ -227,7 +228,7 @@ def train(args):
 
         print('\nStart Evaluation ...\n')
         model = BertClassifier(pretrained='bert-base-multilingual-cased', hidden_size=768, num_labels=len(labels_to_ids)).cuda()
-        model.load_state_dict(torch.load(f'model_{DATE}/bert-checkpoint-{BATCH_SIZE}-{LEARNING_RATE}-{EPOCHS}-{max_len}.pt')) 
+        model.load_state_dict(torch.load(f'model_{DATE}/bert-checkpoint-{BATCH_SIZE}-{LEARNING_RATE}-{EPOCHS}-{MAX_LEN}.pt')) 
 
         prob_predict, predict = [], []
         model.eval()
