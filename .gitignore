@@ -1,0 +1,7 @@
+
+__pycache__/
+ChineseNlpCorpus/
+ChnSenti/
+jigsaw-multilingual-toxic-comment-classification/
+venv/
+wandb/
