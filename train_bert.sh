@@ -4,7 +4,7 @@ python3 train_bert.py --mode train \
 --batch_size 16 \
 --epoch 5 \
 --max_len 100 \
---date 20220922 \
+--date 20220923 \
 --seed 42 \
 --gpu 1 \
 # --wandb 

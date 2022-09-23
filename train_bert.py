@@ -36,7 +36,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int)
     parser.add_argument('--epoch', type=int)
     parser.add_argument('--lr', type=float)
-    parser.add_argument('--MAX_LEN', type=int)
+    parser.add_argument('--max_len', type=int)
     parser.add_argument('--gpu', type=int)
     parser.add_argument('--seed', type=int)
     parser.add_argument('--wandb', action='store_true')
@@ -57,7 +57,7 @@ def simple_text_clean(x):
     x = re.sub(r'\s[^\w\s]\s', '', x)
     return x
 
-def preprocessing_for_bert(data, lbs, MAX_LEN, labels_to_ids, tokenizer):
+def preprocessing_for_bert(data, lbs, max_len, labels_to_ids, tokenizer):
         
     input_ids = []
     attention_masks = []
@@ -66,8 +66,8 @@ def preprocessing_for_bert(data, lbs, MAX_LEN, labels_to_ids, tokenizer):
         encoded_sent = tokenizer.encode_plus(
             text=sent,
             add_special_tokens=True,        
-            MAX_LENgth=MAX_LEN,                  
-            pad_to_MAX_LENgth=True,         
+            max_length=max_len,                  
+            pad_to_max_length=True,         
             return_attention_mask=True)
         input_ids.append(encoded_sent.get('input_ids'))
         attention_masks.append(encoded_sent.get('attention_mask'))
