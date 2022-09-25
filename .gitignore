@@ -6,7 +6,3 @@ jigsaw-multilingual-toxic-comment-classification/
 venv/
 wandb/
 model_20220923/
-chunk_dateset/
-train_bert_chunk.py
-train_bert_chunk.sh
-translate.py
