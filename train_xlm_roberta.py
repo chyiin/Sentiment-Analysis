@@ -73,7 +73,7 @@ def preprocessing_for_bert(data, lbs, max_len, labels_to_ids, tokenizer):
     labels = []
     for id, sent in enumerate(tqdm(data)):
         encoded_sent = tokenizer.encode_plus(
-            text=clean_text(sent),
+            text=sent,
             add_special_tokens=True,        
             max_length=max_len,                  
             pad_to_max_length=True,         
