@@ -14,6 +14,7 @@ from seqeval.metrics import accuracy_score
 from sklearn.metrics import roc_auc_score
 import wandb
 import re
+import string
 
 def same_seeds(seed, gpu):
     torch.manual_seed(seed)
@@ -44,18 +45,26 @@ def parse_args():
 
     return args
 
-def simple_text_clean(x):
-    # remove unicode characters
-    x = x.encode('ascii', 'ignore').decode()
-    x = re.sub(r'https*\S+', ' ', x)
-    x = re.sub(r'http*\S+', ' ', x)
-    # then use regex to remove @ symbols and hashtags
-    x = re.sub(r'\'\w+', '', x)
-    #x = re.sub('[%s]' % re.escape(string.punctuation), ' ', x)
-    x = re.sub(r'\w*\d+\w*', '', x)
-    x = re.sub(r'\s{2,}', ' ', x)
-    x = re.sub(r'\s[^\w\s]\s', '', x)
-    return x
+def clean_text(text):
+    text = text.lower()
+    text = re.sub('https:\/\/\S+', '', text) 
+    text = re.sub('[%s]' % re.escape(string.punctuation), '', text) 
+    text = re.sub(r'[^ \w\.]', '', text) 
+    text = re.sub('\w*\d\w*', '', text)
+    return text
+
+# def simple_text_clean(x):
+#     # remove unicode characters
+#     x = x.encode('ascii', 'ignore').decode()
+#     x = re.sub(r'https*\S+', ' ', x)
+#     x = re.sub(r'http*\S+', ' ', x)
+#     # then use regex to remove @ symbols and hashtags
+#     x = re.sub(r'\'\w+', '', x)
+#     #x = re.sub('[%s]' % re.escape(string.punctuation), ' ', x)
+#     x = re.sub(r'\w*\d+\w*', '', x)
+#     x = re.sub(r'\s{2,}', ' ', x)
+#     x = re.sub(r'\s[^\w\s]\s', '', x)
+#     return x
 
 def preprocessing_for_bert(data, lbs, max_len, labels_to_ids, tokenizer):
         
@@ -64,7 +73,7 @@ def preprocessing_for_bert(data, lbs, max_len, labels_to_ids, tokenizer):
     labels = []
     for id, sent in enumerate(tqdm(data)):
         encoded_sent = tokenizer.encode_plus(
-            text=sent,
+            text=clean_text(sent),
             add_special_tokens=True,        
             max_length=max_len,                  
             pad_to_max_length=True,         
@@ -97,8 +106,8 @@ def train(args):
     print(f'\n[Date]: {DATE}\n[Gpu]: {GPU}\n[Seed]: {SEED}')
     print(f'[Epochs]: {EPOCHS}\n[Batch Size]: {BATCH_SIZE}\n[Learning Rate]: {LEARNING_RATE}\n[Max Length]: {MAX_LEN}\n')
 
-    train_data = pd.read_csv('jigsaw-multilingual-toxic-comment-classification/jigsaw-toxic-comment-train.csv').sample(frac=1).reset_index(drop=True)[:100]
-    valid_data = pd.read_csv('jigsaw-multilingual-toxic-comment-classification/validation.csv').sample(frac=1).reset_index(drop=True)[:10]
+    train_data = pd.read_csv('jigsaw-multilingual-toxic-comment-classification/jigsaw-toxic-comment-train.csv').sample(frac=1).reset_index(drop=True)
+    valid_data = pd.read_csv('jigsaw-multilingual-toxic-comment-classification/validation.csv').sample(frac=1).reset_index(drop=True)
     test_data = pd.read_csv('jigsaw-multilingual-toxic-comment-classification/test.csv')
 
     print('Training Data Size:', train_data.shape)
@@ -108,7 +117,7 @@ def train(args):
     labels_to_ids = {k: v for v, k in enumerate(sorted(list(dict.fromkeys(train_data['toxic']))))}
     ids_to_labels = {v: k for v, k in enumerate(sorted(list(dict.fromkeys(train_data['toxic']))))}
    
-    tokenizer = AutoTokenizer.from_pretrained('xlm-roberta-base')
+    tokenizer = AutoTokenizer.from_pretrained('xlm-roberta-large')
     
     if args['mode'] == 'train':
 
@@ -127,7 +136,7 @@ def train(args):
         validation_sampler = SequentialSampler(validation_data)
         validation_dataloader = DataLoader(validation_data, sampler=validation_sampler, batch_size=BATCH_SIZE)
 
-        model = XLMRoberta(pretrained='xlm-roberta-base', hidden_size=768, num_labels=len(labels_to_ids)).cuda()
+        model = XLMRoberta(pretrained='xlm-roberta-large', hidden_size=1024, num_labels=len(labels_to_ids)).cuda()
 
         FULL_FINETUNING = True
         if FULL_FINETUNING:
@@ -230,7 +239,7 @@ def train(args):
         testing_dataloader = DataLoader(testing_data, batch_size=1, shuffle=False)
 
         print('\nStart Evaluation ...\n')
-        model = XLMRoberta(pretrained='xlm-roberta-base', hidden_size=768, num_labels=len(labels_to_ids)).cuda()
+        model = XLMRoberta(pretrained='xlm-roberta-large', hidden_size=1024, num_labels=len(labels_to_ids)).cuda()
         model.load_state_dict(torch.load(f'model_{DATE}/roberta-checkpoint-{BATCH_SIZE}-{LEARNING_RATE}-{EPOCHS}-{MAX_LEN}.pt')) 
 
         prob_predict, predict = [], []
